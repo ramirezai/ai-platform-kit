@@ -19,9 +19,14 @@ This skill decides **what to build**. It does not deploy workspaces. The other A
 **Pushback level: HIGH for deployment and remote mutations; MODERATE for architecture advice.**
 
 - Ask one architecture question at a time. Never dump the entire question bank.
+- **Never ask a question the customer has already answered**, in the current message or an earlier turn. Harvest what they volunteered, mark it captured, and skip it. Re-asking settled information is the most common failure of this skill.
+- **Accept batched answers.** If the customer volunteers several answers at once, record all of them and only ask what is still open. One-question-at-a-time governs how you ask, not how much you accept.
+- **Explain before recording "unknown."** If the customer answers "I don't know," asks what a term means, or seems unsure, explain the concept in plain language, give the practical tradeoff, and state what customers in their situation typically choose — then re-ask. The purpose of this skill is to help customers who do not yet know; never leave a question at "unknown" without first offering an explanation.
 - Recommend the lowest security tier that satisfies actual requirements. Higher tiers add cost, complexity, and operational burden.
+- **Prefer serverless when it can meet the requirement.** Serverless is the fastest path to value and the lowest operational burden, so it is the commercial default that helps the customer start on Databricks sooner. Before concluding that a requirement — private front-end access, private egress to cloud or on-premises resources, restricted or firewalled egress, or stable egress IPs — forces hybrid/classic, check whether a serverless connectivity feature satisfies it: NCC private endpoints, serverless network policies (egress firewall), inbound (front-end) Private Link (GA and compute-agnostic, so it works with serverless-only workspaces), and the Azure Private Network Gateway (Preview) for on-premises reach. Only move to hybrid/classic when a genuine blocker remains. See `networking-by-cloud.md` for the serverless connectivity matrix and GA/Preview status by cloud.
+- **When a capability the customer needs is only in Preview/Beta, explain both the value and the caveat, then let them decide.** State plainly that the feature is Preview/Beta; explain the implications (may lack Terraform/UI automation, has region and scale limits, is subject to change, is not recommended for hardened production until GA, and availability and GA status should be confirmed with the Databricks account team); and explain how it solves the customer's specific use case and unblocks serverless. Do not hide it, and do not present it as production-ready.
 - Surface conflicting answers and ask one targeted follow-up. Never silently choose between incompatible requirements.
-- Calibrate explanations to the respondent:
+- Calibrate explanations to the respondent (B7). Until B7 is known, default to a middle depth: explain the concept and its tradeoff plainly.
   - Executive or sponsor: risk, cost, ownership, and timeline.
   - Security or compliance lead: controls, mandates, and evidence.
   - Platform or network architect: CIDRs, endpoints, DNS, IAM, and implementation constraints.
@@ -54,11 +59,15 @@ These files are authoritative for advisor detail. Do not use files outside this 
 
 ### Step 1: Ask the architecture gate
 
+First harvest anything already provided (see Step 3's intake harvest) so the gate reflects it.
+
 If the customer says they already know what to deploy, or the opening request supplies a concrete architecture, skip this question and continue to Step 2. Do not require every architecture field before honoring the customer's statement that the design is already known.
 
 Otherwise ask exactly:
 
 > **Do you already know the workspace architecture you need — the security tier or isolation level, cloud, and networking posture? Or would it help to work that out first?**
+
+If the customer has already supplied part of the architecture, acknowledge it in the gate rather than asking as if nothing is known — for example: "You've told me it's Azure and HIPAA-regulated. Do you also know the networking posture and isolation level, or should we work those out?"
 
 Interpret the answer:
 
@@ -85,15 +94,21 @@ Interpret the answer:
 
 ### Step 3: Architecture assessment
 
-Read `question-bank.md`, then follow its recommended flow:
+Read `question-bank.md`, then run the intake harvest before asking anything:
+
+- **Harvest first.** Parse everything the customer has already said — the opening request and every prior turn — and map it to question IDs (B, C, E, T, S, N, P, I, NI). Mark each mapped item as provisionally answered.
+- **Reflect back and confirm.** Restate what you captured as provisional, and tell the customer you will confirm rather than re-ask: "I've captured Azure, Healthcare/HLS, HIPAA, and private-only UI. I'll treat those as settled unless you correct me." Harvested answers are inferences, so confirm them; do not silently skip.
+- **Maintain a running ledger** of captured / open / conflicting IDs throughout the assessment. Never re-ask a captured ID in a later phase — information volunteered while answering B5 (migration) or B6 (existing workspaces) can settle N5, N3, or C3. Ask only the open IDs.
+
+Then follow its recommended flow, skipping any ID already captured:
 
 1. Collect B1–B9 for business context, audience depth, ownership, and approval.
 2. Lock C1, then ask C2 if needed, C4 (region), and C3 so all subsequent questions use the chosen cloud's vocabulary.
 3. Collect E1–E2 for single vs multi-environment and POC vs production.
 4. Ask T1a and T1b one at a time: whether the customer uses Terraform today and whether they want this kit to deploy the approved design with Terraform. Do not initiate the maturity deep-dive.
 5. Keep DR silent unless the customer raises it.
-6. Resolve S1–S5 for serverless versus hybrid/classic.
-7. Walk N1–N5 and P1–P6.
+6. Resolve S1–S5 for serverless versus hybrid/classic. Prefer serverless when a serverless connectivity feature can meet the requirement; GCP private reach is Public Preview, not a hard conflict.
+7. Walk N1–N5 and P1–P6. If serverless is the path, ask S6 when N1=Yes and S7 when N3=Restricted, and check the serverless connectivity matrix in `networking-by-cloud.md` before concluding a customer-managed network is required.
 8. Read `security-tiers.md`; calculate the tier from triggered floors, the T0 sandbox rule, and the CMK modifier.
 9. If T3+, hybrid/classic, or an existing landing zone applies, read `networking-by-cloud.md` and ask the gated NI questions. Skip NI8 unless DR is already in scope.
 10. Ask I1 for SSO/SCIM readiness. If T1b is Yes, confirm the resource `<prefix>` if still unknown.
@@ -115,10 +130,11 @@ Include:
 - customer/workspace and named owners
 - whether the customer wants Terraform deployment after approval
 - industry, cloud, region, and landing-zone constraints
-- environment and compute model
+- environment, compute model, and serverless connectivity choices (private egress, egress firewall, inbound/front-end Private Link)
 - data classification
 - every triggered tier floor and the CMK modifier
-- final T0–T11 recommendation with driving question IDs
+- final T0–T11 recommendation with driving question IDs, noting where serverless is the implementation under the posture
+- any Preview/Beta features the design relies on, with their GA/region confirmation status
 - CIDR, subnet plan, workload band, and overlap status when gated
 - Unity Catalog, identity, logging, encryption, tagging, and `<prefix>`
 - unresolved conflicts and readiness gaps
