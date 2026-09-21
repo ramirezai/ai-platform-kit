@@ -19,12 +19,14 @@ target cloud to avoid cross-cloud confusion.
   Read `.claude/skills/deployment-verification/SKILL.md` when this applies.
 - **databricks-identity-governance** — Manage Databricks identity and governance. Use when the user asks to create groups, users, service principals, set up RBAC, manage permissions, workspace assignments, or configure access control.
   Read `.claude/skills/identity-governance/SKILL.md` when this applies.
-- **databricks-platform-provisioning** — Provision and test Databricks workspaces. Use when the user asks to create a workspace, set up a new environment, provision infrastructure, bootstrap Databricks, test a workspace, verify a deployment, or run validation checks against a Databricks workspace. Covers Azure, AWS, and GCP.
+- **databricks-platform-provisioning** — Use when a customer says they know which Databricks workspace architecture to deploy, supplies a concrete workspace specification, approves a Workspace Advisor decision record for Terraform deployment, or asks to test or verify a deployment. Provisions and tests workspaces with Terraform across Azure, AWS, and GCP. If the customer does not know which architecture they need, use databricks-workspace-advisor first.
   Read `.claude/skills/platform-provisioning/SKILL.md` when this applies.
 - **databricks-private-networking** — Set up private networking for Databricks. Use when the user asks about private link, hub-spoke architecture, NCC (Network Connectivity Configuration), serverless connectivity to private resources, VPC endpoints, or private endpoints.
   Read `.claude/skills/private-networking/SKILL.md` when this applies.
 - **databricks-unity-catalog-setup** — Set up Unity Catalog on Databricks workspaces. Use when the user asks to configure Unity Catalog, create a metastore, set up catalogs, schemas, external locations, storage credentials, or configure data governance. Covers Azure, AWS, and GCP.
   Read `.claude/skills/unity-catalog-setup/SKILL.md` when this applies.
+- **databricks-workspace-advisor** — Use when a customer does not yet know which Databricks workspace architecture they need, has conflicting requirements, wants help choosing a security tier (T0-T11), compute model, or network posture, or asks a specific workspace architecture question. Do not use when the customer says they know what to deploy or supplies a concrete architecture; route those requests directly to databricks-platform-provisioning.
+  Read `.claude/skills/workspace-advisor/SKILL.md` when this applies.
 - **databricks-workspace-config** — Configure Databricks workspace settings. Use when the user asks to create SQL warehouses, cluster policies, secret scopes, IP access lists, manage tokens, update workspace settings, or destroy infrastructure.
   Read `.claude/skills/workspace-config/SKILL.md` when this applies.
 
