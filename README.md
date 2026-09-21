@@ -171,6 +171,7 @@ The agent will:
 
 | Skill | What it does | When it loads |
 |-------|-------------|---------------|
+| **workspace-advisor** | Decide the workspace architecture, compute model, and security tier (T0–T11) when it's not yet known | "which tier", "help me choose", "not sure what to deploy", "serverless or classic" |
 | **platform-provisioning** | Create workspaces, deploy infrastructure | "create a workspace", "provision", "deploy" |
 | **unity-catalog-setup** | Metastore, catalogs, schemas, grants, Lakehouse Federation | "Unity Catalog", "metastore", "catalog" |
 | **identity-governance** | Groups, users, SPs, RBAC | "groups", "permissions", "service principal" |
