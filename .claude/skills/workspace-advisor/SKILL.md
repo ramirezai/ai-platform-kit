@@ -1,6 +1,6 @@
 ---
 name: databricks-workspace-advisor
-description: "Use when a customer does not yet know which Databricks workspace architecture they need, has conflicting requirements, wants help choosing a security tier (T0-T11), compute model, or network posture, or asks a specific workspace architecture question. Do not use when the customer says they know what to deploy or supplies a concrete architecture; route those requests directly to databricks-platform-provisioning."
+description: "Default entry point for setting up or provisioning a Databricks workspace. Use for a general 'set up / provision / deploy a workspace' request, or when the customer does not yet know which architecture they need, has conflicting requirements, wants help choosing a security posture (network isolation, compute model, egress, encryption), or asks a specific workspace-architecture question. Work out the architecture here, then hand off to databricks-platform-provisioning for Terraform deployment. Skip it only when the customer already supplies a concrete architecture or an approved decision record, or asks to test or verify a deployment — route those directly to databricks-platform-provisioning."
 ---
 
 # Databricks Workspace Advisor
@@ -22,11 +22,11 @@ This skill decides **what to build**. It does not deploy workspaces. The other A
 - **Never ask a question the customer has already answered**, in the current message or an earlier turn. Harvest what they volunteered, mark it captured, and skip it. Re-asking settled information is the most common failure of this skill.
 - **Accept batched answers.** If the customer volunteers several answers at once, record all of them and only ask what is still open. One-question-at-a-time governs how you ask, not how much you accept.
 - **Explain before recording "unknown."** If the customer answers "I don't know," asks what a term means, or seems unsure, explain the concept in plain language, give the practical tradeoff, and state what customers in their situation typically choose — then re-ask. The purpose of this skill is to help customers who do not yet know; never leave a question at "unknown" without first offering an explanation.
-- Recommend the lowest security tier that satisfies actual requirements. Higher tiers add cost, complexity, and operational burden.
+- Recommend the least private posture that satisfies actual requirements. More private postures add cost, complexity, and operational burden.
 - **Prefer serverless when it can meet the requirement.** Serverless is the fastest path to value and the lowest operational burden, so it is the commercial default that helps the customer start on Databricks sooner. Before concluding that a requirement — private front-end access, private egress to cloud or on-premises resources, restricted or firewalled egress, or stable egress IPs — forces hybrid/classic, check whether a serverless connectivity feature satisfies it: NCC private endpoints, serverless network policies (egress firewall), inbound (front-end) Private Link (GA and compute-agnostic, so it works with serverless-only workspaces), and the Azure Private Network Gateway (Preview) for on-premises reach. Only move to hybrid/classic when a genuine blocker remains. See `networking-by-cloud.md` for the serverless connectivity matrix and GA/Preview status by cloud.
 - **When a capability the customer needs is only in Preview/Beta, explain both the value and the caveat, then let them decide.** State plainly that the feature is Preview/Beta; explain the implications (may lack Terraform/UI automation, has region and scale limits, is subject to change, is not recommended for hardened production until GA, and availability and GA status should be confirmed with the Databricks account team); and explain how it solves the customer's specific use case and unblocks serverless. Do not hide it, and do not present it as production-ready.
 - Surface conflicting answers and ask one targeted follow-up. Never silently choose between incompatible requirements.
-- Calibrate explanations to the respondent (B7). Until B7 is known, default to a middle depth: explain the concept and its tradeoff plainly.
+- Calibrate explanations to the respondent's role. Until the role is known, default to a middle depth: explain the concept and its tradeoff plainly.
   - Executive or sponsor: risk, cost, ownership, and timeline.
   - Security or compliance lead: controls, mandates, and evidence.
   - Platform or network architect: CIDRs, endpoints, DNS, IAM, and implementation constraints.
@@ -49,7 +49,7 @@ Use **`<prefix>`** only as a documentation placeholder for the customer-specific
 Load only the detail needed for the current phase:
 
 - `question-bank.md` — exact questions, flow, conflicts, RACI, readiness checklist, and Unified Decision Record.
-- `security-tiers.md` — deterministic T0–T11 algorithm, tier ladder, industry ranges, and worked examples.
+- `security-posture.md` — posture-determination logic, the plain-language posture ladder, industry ranges, and worked examples.
 - `networking-by-cloud.md` — gated network questions, subnet sizing, and AWS/Azure/GCP requirements.
 - `terraform-and-dr.md` — customer-led Terraform maturity and disaster-recovery gates. Open only when triggered.
 
@@ -65,7 +65,7 @@ If the customer says they already know what to deploy, or the opening request su
 
 Otherwise ask exactly:
 
-> **Do you already know the workspace architecture you need — the security tier or isolation level, cloud, and networking posture? Or would it help to work that out first?**
+> **Do you already know the workspace architecture you need — the security posture or isolation level, cloud, and networking posture? Or would it help to work that out first?**
 
 If the customer has already supplied part of the architecture, acknowledge it in the gate rather than asking as if nothing is known — for example: "You've told me it's Azure and HIPAA-regulated. Do you also know the networking posture and isolation level, or should we work those out?"
 
@@ -84,7 +84,7 @@ Interpret the answer:
    - single workspace or multiple environments
    - POC or production
    - serverless or hybrid/classic compute
-   - security tier and network posture
+   - security and network posture
    - data sensitivity and compliance requirements
    - customer-managed key requirement
    - Unity Catalog, identity, and governance requirements
@@ -96,30 +96,30 @@ Interpret the answer:
 
 Read `question-bank.md`, then run the intake harvest before asking anything:
 
-- **Harvest first.** Parse everything the customer has already said — the opening request and every prior turn — and map it to question IDs (B, C, E, T, S, N, P, I, NI). Mark each mapped item as provisionally answered.
+- **Harvest first.** Parse everything the customer has already said — the opening request and every prior turn — and map it to the question topics (business context, cloud, environment, Terraform baseline, compute model, network, security posture, identity, gated network detail). Mark each mapped item as provisionally answered.
 - **Reflect back and confirm.** Restate what you captured as provisional, and tell the customer you will confirm rather than re-ask: "I've captured Azure, Healthcare/HLS, HIPAA, and private-only UI. I'll treat those as settled unless you correct me." Harvested answers are inferences, so confirm them; do not silently skip.
-- **Maintain a running ledger** of captured / open / conflicting IDs throughout the assessment. Never re-ask a captured ID in a later phase — information volunteered while answering B5 (migration) or B6 (existing workspaces) can settle N5, N3, or C3. Ask only the open IDs.
+- **Maintain a running ledger** of captured / open / conflicting topics throughout the assessment. Never re-ask a captured topic in a later phase — information volunteered while answering the origin (migration) or existing-workspaces question can settle on-premises connectivity, egress policy, or the landing zone. Ask only the open topics.
 
-Then follow its recommended flow, skipping any ID already captured:
+Then follow its recommended flow, skipping any topic already captured:
 
-1. Collect B1–B9 for business context, audience depth, ownership, and approval.
-2. Lock C1, then ask C2 if needed, C4 (region), and C3 so all subsequent questions use the chosen cloud's vocabulary.
-3. Collect E1–E2 for single vs multi-environment and POC vs production.
-4. Ask T1a and T1b one at a time: whether the customer uses Terraform today and whether they want this kit to deploy the approved design with Terraform. Do not initiate the maturity deep-dive.
+1. Collect the business context for audience depth, ownership, and approval.
+2. Lock the cloud provider, then ask the multi-cloud strategy if needed, the region, and the landing zone so all subsequent questions use the chosen cloud's vocabulary.
+3. Collect the environment strategy for single vs multi-environment and POC vs production.
+4. Ask the two Terraform-baseline questions one at a time: whether the customer uses Terraform today and whether they want this kit to deploy the approved design with Terraform. Do not initiate the maturity deep-dive.
 5. Keep DR silent unless the customer raises it.
-6. Resolve S1–S5 for serverless versus hybrid/classic. Prefer serverless when a serverless connectivity feature can meet the requirement; GCP private reach is Public Preview, not a hard conflict.
-7. Walk N1–N5 and P1–P6. If serverless is the path, ask S6 when N1=Yes and S7 when N3=Restricted, and check the serverless connectivity matrix in `networking-by-cloud.md` before concluding a customer-managed network is required.
-8. Read `security-tiers.md`; calculate the tier from triggered floors, the T0 sandbox rule, and the CMK modifier.
-9. If T3+, hybrid/classic, or an existing landing zone applies, read `networking-by-cloud.md` and ask the gated NI questions. Skip NI8 unless DR is already in scope.
-10. Ask I1 for SSO/SCIM readiness. If T1b is Yes, confirm the resource `<prefix>` if still unknown.
+6. Resolve the compute model and serverless connectivity questions for serverless versus hybrid/classic. Prefer serverless when a serverless connectivity feature can meet the requirement; GCP private reach is Public Preview, not a hard conflict.
+7. Walk the network-and-connectivity and security-posture questions. If serverless is the path, ask about a private front-end on serverless when private front-end access is required, and about restricted egress on serverless when the egress policy is Restricted-only, and check the serverless connectivity matrix in `networking-by-cloud.md` before concluding a customer-managed network is required.
+8. Read `security-posture.md`; determine the posture from the driving requirements, the Sandbox rule, and any customer-managed-keys layer.
+9. If the posture reaches Standard or higher, hybrid/classic is chosen, or an existing landing zone applies, read `networking-by-cloud.md` and ask the gated network-implementation questions. Skip the secondary-region-CIDR question unless DR is already in scope.
+10. Ask about SSO/SCIM readiness. If the customer wants this kit to deploy, confirm the resource `<prefix>` if still unknown.
 11. Run the conflict checks from `question-bank.md`.
 
 Hard behavior rules:
 
-- **Terraform is customer-led.** Ask T1a and T1b by default. Read `terraform-and-dr.md` and ask T1–T3 only if the customer asks about modules, remote state, CI/CD, or multi-environment reuse.
+- **Terraform is customer-led.** Ask the two Terraform-baseline questions by default. Read `terraform-and-dr.md` and ask the maturity questions only if the customer asks about modules, remote state, CI/CD, or multi-environment reuse.
 - **DR is customer-led.** Never mention DR, regional outages, failover, RTO/RPO, or a second region unless the customer raises the topic. Then read `terraform-and-dr.md`.
-- **Security tier is deterministic.** Do not eyeball it. Calculate all floors, choose the maximum, then apply the CMK modifier.
-- **Cloud vocabulary is locked after C1.** Do not imply feature parity where none exists.
+- **The posture is deterministic.** Do not eyeball it. Work through every driving requirement, take the most private one, then layer on the added controls and any customer-managed-keys requirement.
+- **Cloud vocabulary is locked after the cloud provider is chosen.** Do not imply feature parity where none exists.
 
 ### Step 4: Present the decision record
 
@@ -132,8 +132,8 @@ Include:
 - industry, cloud, region, and landing-zone constraints
 - environment, compute model, and serverless connectivity choices (private egress, egress firewall, inbound/front-end Private Link)
 - data classification
-- every triggered tier floor and the CMK modifier
-- final T0–T11 recommendation with driving question IDs, noting where serverless is the implementation under the posture
+- every driving requirement and any customer-managed-keys layer
+- the recommended posture in plain language (the controls it includes) with the driving requirements, noting where serverless is the implementation under the posture
 - any Preview/Beta features the design relies on, with their GA/region confirmation status
 - CIDR, subnet plan, workload band, and overlap status when gated
 - Unity Catalog, identity, logging, encryption, tagging, and `<prefix>`
@@ -141,15 +141,15 @@ Include:
 
 Include Terraform maturity only if the customer requested that deep-dive. Include DR only if the customer raised DR.
 
-Ask the customer to correct or approve the record. If T1b is No, deliver the approved record and stop; do not load deployment skills.
+Ask the customer to correct or approve the record. If the customer does not want this kit to deploy, deliver the approved record and stop; do not load deployment skills.
 
 ### Step 5: Hand off without re-asking
 
-After approval, only when T1b confirms that the customer wants Terraform deployment:
+After approval, only when the customer has confirmed they want Terraform deployment:
 
 1. Read `../platform-provisioning/SKILL.md`.
 2. Pre-fill its intake from the Unified Decision Record. Do not re-ask Round 2 network isolation, encryption, or compliance questions already settled by the record.
-3. Treat T6+, N1=Yes, or an explicit private-connectivity mandate in the record as an explicit request for the matching private-networking pattern. Do not fall back to a public-front-end default.
+3. Treat a Fully-private (private front-end) posture, required private front-end access, or an explicit private-connectivity mandate in the record as an explicit request for the matching private-networking pattern. Do not fall back to a public-front-end default.
 4. Load only the implementation skills needed:
    - `../private-networking/SKILL.md` for Private Link, Private Endpoints, PSC, NCC, hub-spoke, DNS, or restricted egress.
    - `../unity-catalog-setup/SKILL.md` for metastores, catalogs, storage credentials, and external locations.
@@ -159,7 +159,7 @@ After approval, only when T1b confirms that the customer wants Terraform deploym
 6. Follow the implementation skill's approval gate for every remote mutation.
 7. Do not declare completion until `../deployment-verification/SKILL.md` has run every applicable required path.
 
-If T1b is No, do not hand off to platform provisioning. State that the architecture decision is complete and no infrastructure was deployed.
+If the customer does not want this kit to deploy, do not hand off to platform provisioning. State that the architecture decision is complete and no infrastructure was deployed.
 
 ## Examples
 
@@ -173,7 +173,7 @@ Skip the advisor and go directly to platform provisioning. Pre-fill its intake w
 
 > A regulated-industry customer wants Databricks, but we have not selected the architecture.
 
-Run the guided assessment one question at a time, calculate the tier, produce the decision record, and obtain approval. Hand it to platform provisioning only if the customer wants Terraform deployment.
+Run the guided assessment one question at a time, determine the posture, produce the decision record, and obtain approval. Hand it to platform provisioning only if the customer wants Terraform deployment.
 
 **Reference lookup**
 

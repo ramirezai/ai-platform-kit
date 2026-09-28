@@ -1,6 +1,6 @@
 # Networking and permissions by cloud
 
-Load this file when the assessment involves a customer-managed network (tier T3+), subnet sizing, private connectivity, egress, CMK, deployer IAM, or **any serverless connectivity requirement**.
+Load this file when the assessment involves a customer-managed network (Standard posture or higher), subnet sizing, private connectivity, egress, CMK, deployer IAM, or **any serverless connectivity requirement**.
 
 Always use the customer's cloud vocabulary. Never assume parity.
 
@@ -22,7 +22,7 @@ Foundation: a **Network Connectivity Configuration (NCC)** is an account-level o
 
 Front-end (inbound) private connectivity is **compute-agnostic**: users reach the workspace UI/API the same way whether the workspace runs serverless or classic. That is why a serverless-only workspace can still have a private front end. Narrower advanced controls are still Beta — see the caveats.
 
-This means a customer who needs **private front-end access (N1)**, **restricted egress (N3)**, or **private reach to their own resources** may not need a customer-managed network at all — serverless plus NCC, network policies, or inbound Private Link can satisfy several of these. Reconcile against the tier before defaulting to classic.
+This means a customer who needs **private front-end access**, **restricted egress**, or **private reach to their own resources** may not need a customer-managed network at all — serverless plus NCC, network policies, or inbound Private Link can satisfy several of these. Reconcile against the posture before defaulting to classic.
 
 Limits and caveats to state plainly:
 
@@ -37,45 +37,45 @@ Limits and caveats to state plainly:
 
 ## Gated network questions
 
-Run the gated NI questions when the tier is T3+, hybrid/classic is selected, or C3 indicates an existing landing zone. Ask only the applicable IDs, one at a time. Never dump NI1–NI12.
+Run the gated network-implementation questions when the posture reaches Standard or higher, hybrid/classic is selected, or an existing landing zone applies. Ask only the applicable ones, one at a time. Never dump them all at once.
 
 Skip gates:
 
-- **NI1:** skip for serverless-only.
-- **NI6:** ask only if N5=Yes.
-- **NI8:** ask only if the customer already raised DR. Do not mention a second region or secondary CIDR otherwise.
-- **NI11:** ask only at T4+.
+- **Compute subnet size:** skip for serverless-only.
+- **On-premises CIDRs:** ask only if on-premises connectivity is required.
+- **Secondary-region CIDR:** ask only if the customer already raised DR. Do not mention a second region or secondary CIDR otherwise.
+- **Dedicated private-endpoint subnet:** ask only at Private-storage-connectivity or higher.
 
-Each NI question carries an *If unsure* gloss. Offer it whenever the customer hesitates, and route to their network team as a named readiness gap rather than guessing a CIDR or DNS answer.
+Each question carries an *If unsure* gloss. Offer it whenever the customer hesitates, and route to their network team as a named readiness gap rather than guessing a CIDR or DNS answer.
 
-- **NI1:** Roughly how large is classic compute at a busy time? Ask for S/M/L/XL, not an exact node count unless the customer already has one.
+- **Compute subnet size:** Roughly how large is classic compute at a busy time? Ask for S/M/L/XL, not an exact node count unless the customer already has one.
   - *If unsure:* This sizes the subnet, which is a hard ceiling on how many nodes can run. Pick a rough t-shirt size — a handful of analysts (S), one data team (M), several teams/heavy ETL (L), or platform-wide (XL). We bias upward because growing a subnet later is disruptive.
-- **NI2:** Do you have a VPC/VNet CIDR and subnet plan, or do you need a recommendation?
+- **Existing CIDR/subnet plan:** Do you have a VPC/VNet CIDR and subnet plan, or do you need a recommendation?
   - *If unsure:* A CIDR is the private IP range the network uses (e.g. `10.4.0.0/16`). If your cloud/network team already assigns these, get theirs; otherwise we'll propose one. Answering "need a recommendation" is fine.
-- **NI3:** Explain that subnet size is a hard compute ceiling and can be disruptive to change. What VPC/VNet CIDR and subnet sizes should be used?
+- **Subnet sizing:** Explain that subnet size is a hard compute ceiling and can be disruptive to change. What VPC/VNet CIDR and subnet sizes should be used?
   - *If unsure:* The subnet's size caps your maximum concurrent nodes (roughly 2 IPs per classic node). Too small and you hit a wall you can't easily move; we size for peak plus headroom. Our default recommendation is **/24 host and container subnets** (~120 nodes) unless you have a small fixed workload or a larger known peak — see the sizing bands and best-practice rules below.
-- **NI4:** What literal CIDR should be used, or should one be proposed?
+- **Literal CIDR:** What literal CIDR should be used, or should one be proposed?
   - *If unsure:* The exact range to assign. If you don't own IP planning, we'll propose a non-overlapping range and your network team confirms it.
-- **NI5:** Which cloud, hub/transit, and on-premises ranges must not overlap? Is there an IPAM registry?
+- **Overlap and IPAM:** Which cloud, hub/transit, and on-premises ranges must not overlap? Is there an IPAM registry?
   - *If unsure:* Overlapping IP ranges break routing between networks. An IPAM registry is the system your org uses to track which ranges are taken. If you don't know, your network team owns this — capture it as a gap.
-- **NI6** (N5=Yes): What are the on-premises CIDRs?
+- **On-premises CIDRs** (when on-premises connectivity is required): What are the on-premises CIDRs?
   - *If unsure:* The IP ranges of your data-center networks the workspace must reach. Needed so we pick a range that doesn't collide with them. Your network team has these.
-- **NI7:** Is this the only workspace, or should ranges be reserved for dev/staging/prod or other workspaces?
+- **Reserve ranges for other environments:** Is this the only workspace, or should ranges be reserved for dev/staging/prod or other workspaces?
   - *If unsure:* If you'll add more workspaces or environments later, we reserve address space now so they don't overlap. If it's genuinely a one-off, we size just for this one.
-- **NI8** (DR in scope): What non-overlapping CIDR will the secondary region use?
+- **Secondary-region CIDR** (when DR is in scope): What non-overlapping CIDR will the secondary region use?
   - *If unsure:* For disaster recovery, the backup region needs its own range that doesn't overlap the primary. Only relevant if cross-region DR is in scope.
-- **NI9:** Central hub/transit with shared egress firewall, or standalone outbound?
+- **Egress path:** Central hub/transit with shared egress firewall, or standalone outbound?
   - *If unsure:* "Hub" means outbound traffic flows through a shared, inspected exit point your org already runs; "standalone" means this workspace has its own exit. If you have a cloud landing zone, it's usually hub. Ask your network team.
-- **NI10:** Who owns DNS, and can they create/delegate private zones or forwarding?
+- **DNS ownership:** Who owns DNS, and can they create/delegate private zones or forwarding?
   - *If unsure:* Private connectivity depends on DNS resolving workspace hostnames to private addresses. We need the person/team who can create private DNS zones or forwarding rules. DNS is the most common cause of private-link failures, so identify the owner early.
-- **NI11** (tier T4+): Are dedicated private-endpoint subnets reserved separately from compute?
+- **Dedicated private-endpoint subnet** (Private-storage-connectivity or higher): Are dedicated private-endpoint subnets reserved separately from compute?
   - *If unsure:* Private endpoints (the private on-ramps to storage/control plane) usually sit in their own small subnet, separate from where clusters run, so they don't compete for addresses. If you haven't planned one, we'll size it.
-- **NI12:** Can the deployer create network resources, or is a separate cloud/network team required?
+- **Deployer network permissions:** Can the deployer create network resources, or is a separate cloud/network team required?
   - *If unsure:* Whether whoever runs Terraform has cloud permissions to create VPCs, subnets, endpoints, and DNS — or whether a separate network team must build those first. If unclear, assume a network team is involved and capture the handoff.
 
 ## Workload bands
 
-Use B4 to suggest a band, then confirm:
+Use the scale answer (people/teams) to suggest a band, then confirm:
 
 | Band | Recognition | Planning nodes |
 | --- | --- | ---: |
@@ -84,7 +84,7 @@ Use B4 to suggest a band, then confirm:
 | L | Several teams or concurrent ETL | 200 |
 | XL / unknown | Platform-wide or leave room to grow | 500 |
 
-Skip NI1 for serverless-only. If the customer already has a numeric peak, use it. Subnet size is a hard ceiling; bias upward.
+Skip the compute-subnet-size question for serverless-only. If the customer already has a numeric peak, use it. Subnet size is a hard ceiling; bias upward.
 
 ## Subnet sizing rules
 
@@ -101,7 +101,7 @@ Keep the platform's **hard limits** (verified against the Databricks docs) separ
 - **Default to /24 for the host and container (driver/executor) subnets.** A /24 supports roughly 120 nodes per subnet, leaves headroom to grow, and avoids the disruptive re-size a smaller subnet forces (subnet size is a hard ceiling and cannot be changed in place). This is our recommendation, one step larger than Azure's documented /26 floor and /28 minimum — hold to /24 unless the customer confirms a small, fixed workload, and **size up (/23, /22, …) for larger peaks** per the node math above and the workload bands.
 - Keep the host and container subnets **equal in size** (Azure).
 - Bias the **VNet/VPC up to /16–/20** so multiple non-overlapping workspace subnets (dev/staging/prod) and a private-endpoint subnet fit without renumbering later.
-- Reserve a separate **~/27 private-endpoint subnet** at tier T4+, kept apart from compute (Azure/GCP).
+- Reserve a separate **~/27 private-endpoint subnet** at Private-storage-connectivity or higher, kept apart from compute (Azure/GCP).
 - Confirm the **current Databricks-reserved CIDR ranges** in the AWS customer-managed VPC docs before finalizing, and avoid overlap with them and with hub/on-prem ranges. (Historically Databricks has reserved internal ranges such as `10.139.0.0/16`; verify the current list rather than assuming.)
 
 ## Worked sizing examples: 200 classic nodes
@@ -120,7 +120,7 @@ Azure:
 ```text
 200 nodes x 2 IPs + 5 reserved = 405 IPs per delegated subnet.
 Recommend equal /23 host and container subnets.
-Use a /16–/24 VNet and add a private-endpoint subnet at tier T4+.
+Use a /16–/24 VNet and add a private-endpoint subnet at Private-storage-connectivity or higher.
 ```
 
 GCP:
@@ -133,21 +133,21 @@ GCP uses one subnet with one primary range; no secondary ranges or delegation.
 ## AWS requirements
 
 - **Network model:** customer-managed VPC with VPC injection and at least two subnets across AZs.
-- **Private connectivity (T4+):** AWS PrivateLink with workspace and SCC relay interface endpoints. Set no-public-IP/NPIP and disable public access when required.
+- **Private connectivity (Private-storage-connectivity or higher):** AWS PrivateLink with workspace and SCC relay interface endpoints. Set no-public-IP/NPIP and disable public access when required.
 - **Browser authentication:** no separate endpoint; browser and REST share the workspace endpoint.
 - **Private DNS:** Route 53 private hosted zones/records associated with the VPC.
-- **Egress:** NAT for standard classic control-plane traffic; for T8+ use Transit Gateway plus an inspection VPC or AWS Network Firewall.
+- **Egress:** NAT for standard classic control-plane traffic; for Restricted egress or higher use Transit Gateway plus an inspection VPC or AWS Network Firewall.
 - **CMK:** AWS KMS; the cross-account role requires decrypt, data-key generation, and key-description permissions.
 - **Deployer IAM:** VPC, subnet, security group, VPC endpoint, Route 53, PassRole, and KMS permissions when in scope.
 
 ## Azure requirements
 
 - **Network model:** VNet injection with host and container subnets delegated to `Microsoft.Databricks/workspaces`.
-- **Private connectivity (T4+):** `databricks_ui_api` and `browser_authentication` private endpoints.
+- **Private connectivity (Private-storage-connectivity or higher):** `databricks_ui_api` and `browser_authentication` private endpoints.
 - **Browser authentication:** only one browser-authentication endpoint per region per private DNS zone.
 - **Private DNS:** `privatelink.azuredatabricks.net`.
 - **Public access:** disable Public Network Access when private-only access is required.
-- **Egress:** Azure Firewall/NVA in a hub VNet with UDRs for T8+. New private VNets need an explicit outbound method.
+- **Egress:** Azure Firewall/NVA in a hub VNet with UDRs for Restricted egress or higher. New private VNets need an explicit outbound method.
 - **NSGs:** retain the Microsoft-provided Databricks rules on delegated subnets.
 - **CMK:** Key Vault plus an Access Connector managed identity with the required crypto role.
 - **Deployer IAM:** VNet, NSG, private endpoint, private DNS, Databricks workspace, and Key Vault write permissions when in scope.
@@ -155,10 +155,10 @@ GCP uses one subnet with one primary range; no secondary ranges or delegation.
 ## GCP requirements
 
 - **Network model:** customer-managed VPC injection with one subnet and one primary IP range.
-- **Private connectivity (T4+):** Private Service Connect service attachments, reserved internal addresses, forwarding rules, and private Cloud DNS.
+- **Private connectivity (Private-storage-connectivity or higher):** Private Service Connect service attachments, reserved internal addresses, forwarding rules, and private Cloud DNS.
 - **Browser authentication:** DNS A record, not a separate endpoint object.
 - **Serverless private reach:** GCP serverless can privately reach customer-managed VPC resources via **outbound Private Service Connect (Public Preview)** — expose the target behind an internal load balancer / service attachment and add an NCC private endpoint rule. On-premises is reachable through Google NCC plus Cloud Interconnect/VPN, subject to PSC/NCC propagation caveats. Serverless cannot use PSC to reach Google-managed services (GCS/BigQuery); those use Private Google Access. This is no longer a hard conflict — apply the Preview-explanation rule: state that it is Public Preview, note it must be enabled in the account console and that the Terraform provider does not create the private endpoint rule, explain how it unblocks the customer's serverless use case, and confirm GA/region with the account team. If the customer needs a GA private path today, offer hybrid/classic as the alternative.
-- **Egress:** Cloud NAT for stable egress; Cloud NGFW/firewall policy for T8+ restricted egress.
+- **Egress:** Cloud NAT for stable egress; Cloud NGFW/firewall policy for Restricted egress or higher.
 - **CMK:** Cloud KMS; the workspace service account needs encryption/decryption access to the key.
 - **Deployer IAM:** VPC, subnet, firewall, address, forwarding-rule, Cloud DNS, service-account-policy, and KMS-policy permissions when in scope.
 
