@@ -4,9 +4,9 @@ Open this file **only when the customer raises these topics**.
 
 By default:
 
-- Ask T1a: "Are you using Terraform to deploy infrastructure today?"
-- Then ask T1b: "After the architecture is approved, do you want this kit to deploy it with Terraform, or do you only need the architecture decision record?"
-- Use T1b to control handoff: Yes routes to platform provisioning after approval; No ends after the approved decision record without deployment.
+- Ask whether they use Terraform today: "Are you using Terraform to deploy infrastructure today?"
+- Then ask whether the kit should deploy: "After the architecture is approved, do you want this kit to deploy it with Terraform, or do you only need the architecture decision record?"
+- Use the deploy answer to control handoff: Yes routes to platform provisioning after approval; No ends after the approved decision record without deployment.
 - Never mention disaster recovery, regional outages, failover, RTO/RPO, or a second region.
 
 ## Terraform deep-dive
@@ -15,9 +15,9 @@ Trigger: the customer asks about module structure, remote state, CI/CD for infra
 
 Then ask:
 
-- **T1:** Does your organization have engineers experienced with Terraform?
-- **T2:** Do you have a remote Terraform state backend with locking and a CI/CD pipeline?
-- **T3:** Do you need this configuration reusable across environments or business units?
+- **Terraform experience:** Does your organization have engineers experienced with Terraform?
+- **Remote state and CI/CD:** Do you have a remote Terraform state backend with locking and a CI/CD pipeline?
+- **Reuse across environments:** Do you need this configuration reusable across environments or business units?
 
 ## Maturity model
 
@@ -33,13 +33,13 @@ Then ask:
 
 Local Terraform is acceptable only for sandbox or learning work.
 
-Anything with real data, tier T3+, or DR in scope should deploy through a Git-controlled pipeline with remote state and reviewed applies. Require this from Level 2 onward.
+Anything with real data, a Standard posture or higher, or DR in scope should deploy through a Git-controlled pipeline with remote state and reviewed applies. Require this from Level 2 onward.
 
 ### Resource strategy
 
 - **Pre-built template:** fastest path; best for a single workspace at Level 0–1.
 - **Modularized Terraform:** maintainable across environments and landing zones; best for multiple or regulated workspaces at Level 2+.
-- Existing landing zone (C3=Yes) strongly favors a modularized approach.
+- An existing landing zone strongly favors a modularized approach.
 
 The `platform-provisioning` skill owns actual Terraform generation and deployment.
 
@@ -51,13 +51,13 @@ Databricks provides in-region high availability. This gate decides whether **cro
 
 Ask:
 
-- **DR1:** Would a multi-hour/day regional outage cause unacceptable business, safety, or regulatory impact?
+- **Outage impact:** Would a multi-hour/day regional outage cause unacceptable business, safety, or regulatory impact?
   - If No, stop and record: "Cross-region DR not warranted; in-region HA is sufficient."
-- **DR2:** Do you have a documented, business-approved RTO and RPO?
-- **DR3:** Is there a regulatory or contractual mandate for cross-region recovery?
-- **DR4:** Is RTO near-zero, with the capacity and budget to run production in two regions concurrently?
-- **DR5:** Can the organization fund and operate a second workspace and test failover regularly?
-- **NI8** (when a customer-managed network is in scope): What non-overlapping CIDR will the secondary region use?
+- **RTO/RPO documented:** Do you have a documented, business-approved RTO and RPO?
+- **Cross-region mandate:** Is there a regulatory or contractual mandate for cross-region recovery?
+- **Near-zero RTO:** Is RTO near-zero, with the capacity and budget to run production in two regions concurrently?
+- **Second-workspace commitment:** Can the organization fund and operate a second workspace and test failover regularly?
+- **Secondary-region CIDR** (when a customer-managed network is in scope): What non-overlapping CIDR will the secondary region use?
 
 DR qualifies only when all are true:
 
@@ -75,7 +75,7 @@ Qualifies:
 ```text
 DR gate outcome: QUALIFIES
 Cross-region DR is warranted.
-The secondary region must mirror the primary security tier.
+The secondary region must mirror the primary security posture.
 Default to active-passive unless RTO is near-zero and dual-run budget exists.
 Consider managed DR when operating replication and failover is the concern.
 ```
@@ -97,7 +97,7 @@ List the blocking reasons.
 
 The secondary region must:
 
-- mirror the primary workspace's security tier
+- mirror the primary workspace's security posture
 - use a non-overlapping CIDR
 - receive equivalent identity, governance, networking, and data-replication controls
 - participate in recurring failover tests
